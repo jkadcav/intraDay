@@ -3,12 +3,10 @@ library('events')
 library('market')
 library('competitor')
 
-master_collate<-function(date,animal,race,meetingId){
-  events<-events::retrieve_events(meetingId)
-  meet.l<-rep(meetingId,length(events$EventID))
-  events$race<-mapply(events::retrieve_races,meet.l,events$EventID)
-  runners<-events::retrieve_runners(race,meetingId)
-  runners$EventID<-events$EventID[events$race==race]
+master_collate<-function(date,animal,race,meetingId,events){
+  eventId<-events$EventID[events$Race==race]
+  runners<-events::retrieve_runners_ns(meetingId,race,eventId)
+  runners$EventID<-eventId
   runners$Matrix<-mapply(market::retrieve_competitor_matrix_value,runners$Race,runners$MeetingID,runners$CompID)
   runners$Odds<-market::retrieve_prices(race,meetingId)
   runners$Date<-date
@@ -37,21 +35,18 @@ main<-function(date,animal, venueName){
   events$MeetingID<-meetingid
   events$Status<-mapply(events::event_status,events$EventID)
   events<-events[events$Status=="FINAL",]
-
   events$Fields<-fields<-mapply(events::retrieve_field,events$EventID)-mapply(competitor::scratchings,events$EventID)
   events$Race<-mapply(events::retrieve_races,events$MeetingID,events$EventID)
   events<-events[order(events$Race),]
   print('<<<')
-  print(events)
   races<-events[!duplicated(events[c("MeetingID","Race")]),c("MeetingID","Race")]
-  dat<-as.data.frame(matrix(NA,sum(fields),9))
-  colnames(dat)<-c('Course','CompID','Matrix','Race','MeetingID','Odds','EventID','Distance','FP')
-
+  dat<-as.data.frame(matrix(NA,sum(fields),10))
+  colnames(dat)<-c('Course','CompID','Matrix','Race','MeetingID','Odds','Scratched','EventID','Distance','FP')
   for(i in 1:nrow(races)){
     end<-sum(events$Fields[1:i])
     if(i==1) start<-1
     else start<-sum(events$Fields[1:(i-1)])+1
-    a<-master_collate(date,animal,events$Race[i],meetingid)
+    a<-master_collate(date,animal,events$Race[i],meetingid,events)
     print('>>>')
     print(a)
     dat[start:end,]<-a
