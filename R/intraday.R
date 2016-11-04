@@ -16,6 +16,7 @@ master_collate<-function(date,animal,race,meetingId,events){
   runners$FP<-mapply(competitor::finish_position,runners$EventID,runners$CompID)
   runners$Date<-NULL
   runners$Animal<-NULL
+  runners$Race_Name<-mapply(events::event_name,runners$EventID)
   return(runners)
 }
 
@@ -40,8 +41,8 @@ main<-function(date,animal, venueName){
   events<-events[order(events$Race),]
   print('<<<')
   races<-events[!duplicated(events[c("MeetingID","Race")]),c("MeetingID","Race")]
-  dat<-as.data.frame(matrix(NA,sum(fields),10))
-  colnames(dat)<-c('Course','CompID','Matrix','Race','MeetingID','Odds','Scratched','EventID','Distance','FP')
+  dat<-as.data.frame(matrix(NA,sum(fields),11))
+  colnames(dat)<-c('Course','CompID','Matrix','Race','MeetingID','Odds','Scratched','EventID','Distance','FP','Race_Name')
   for(i in 1:nrow(races)){
     end<-sum(events$Fields[1:i])
     if(i==1) start<-1
