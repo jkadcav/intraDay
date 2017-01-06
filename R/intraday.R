@@ -12,11 +12,11 @@ master_collate<-function(race,meetingId,events){
   print(runners)
   runners$Distance<-mapply(intradata::retrieve_event_info,runners$MeetingID,runners$Race,'distance')
   runners$Matrix<-mapply(intradata::retrieve_attribute,runners$MeetingID,runners$Race,runners$CompID,'mtx')
-  runners$Odds<-mapply(retrieve_attribute,runners$MeetingID,runners$Race,runners$CompID,'odds')
-  runners$Course<-toupper(mapply(retrieve_meet_info,runners$MeetingID,'venue_name'))
-  runners$FP<-mapply(retrieve_attribute,runners$MeetingID,runners$Race,runners$CompID,'finish_position')
-  runners$Race_Name<-mapply(retrieve_event_info,runners$MeetingID,runners$Race,'track_type')
-  runners$Include<-mapply(retrieve_event_info,runners$MeetingID,runners$Race,'includeRace')
+  runners$Odds<-mapply(intradata::retrieve_attribute,runners$MeetingID,runners$Race,runners$CompID,'odds')
+  runners$Course<-toupper(mapply(intradata::retrieve_meet_info,runners$MeetingID,'venue_name'))
+  runners$FP<-mapply(intradata::retrieve_attribute,runners$MeetingID,runners$Race,runners$CompID,'finish_position')
+  runners$Race_Name<-mapply(intradata::retrieve_event_info,runners$MeetingID,runners$Race,'track_type')
+  runners$Include<-mapply(intradata::retrieve_event_info,runners$MeetingID,runners$Race,'includeRace')
   return(runners)
 }
 
