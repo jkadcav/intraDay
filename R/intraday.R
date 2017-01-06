@@ -1,23 +1,22 @@
-library('meeting')
-library('events')
-library('market')
-library('competitor')
+library('intradata')
 
-master_collate<-function(date,animal,race,meetingId,events){
+master_collate<-function(race,meetingId,events){
   eventId<-events$EventID[events$Race==race]
-  runners<-events::retrieve_runners_ns(meetingId,race,eventId)
+  rs<-names(intradata::retrieve_event_info(meetingId,race,'event_competitors'))
+  runners<-as.data.frame(matrix(NA,length(rs),2))
+  colnames(runners)<-c('EventID','CompID')
+  runners$CompID<-rs
   runners$EventID<-eventId
-  runners$Matrix<-mapply(market::retrieve_competitor_matrix_value,runners$Race,runners$MeetingID,runners$CompID)
-  runners$Odds<-market::retrieve_prices(race,meetingId)
-  runners$Date<-date
-  runners$Animal<-animal
-  runners$Course<-toupper(mapply(meeting::retrieve_course,runners$Date,runners$Animal,runners$MeetingID))
-  runners$Distance<-mapply(events::event_distance,runners$EventID)
-  runners$FP<-mapply(competitor::finish_position,runners$EventID,runners$CompID)
-  runners$Date<-NULL
-  runners$Animal<-NULL
-  runners$Race_Name<-mapply(events::event_name,runners$EventID)
-  runners$Include<-mapply(market::retrieve_exclude,runners$Race,runners$MeetingID)
+  runners$Race<-race
+  runners$MeetingID<-meetingId
+  print(runners)
+  runners$Distance<-mapply(intradata::retrieve_event_info,runners$MeetingID,runners$Race,'distance')
+  runners$Matrix<-mapply(intradata::retrieve_attribute,runners$MeetingID,runners$Race,runners$CompID,'mtx')
+  runners$Odds<-mapply(retrieve_attribute,runners$MeetingID,runners$Race,runners$CompID,'odds')
+  runners$Course<-toupper(mapply(retrieve_meet_info,runners$MeetingID,'venue_name'))
+  runners$FP<-mapply(retrieve_attribute,runners$MeetingID,runners$Race,runners$CompID,'finish_position')
+  runners$Race_Name<-mapply(retrieve_event_info,runners$MeetingID,runners$Race,'track_type')
+  runners$Include<-mapply(retrieve_event_info,runners$MeetingID,runners$Race,'includeRace')
   return(runners)
 }
 
@@ -31,29 +30,27 @@ master_collate<-function(date,animal,race,meetingId,events){
 #' @export
 #' @examples
 #' main('2016-10-26','THOROUGHBRED','HAPPY VALLEY')
-main<-function(date,animal, venueName){
-  meetingid<-meeting::retrieve_meeting_id(date,animal,venueName)
-  events<-events::retrieve_events(meetingid)
-  events$MeetingID<-meetingid
-  events$Status<-mapply(events::event_status,events$EventID)
+main<-function(meetingId){
+  events<-intradata::retrieve_events(meetingId)
+  events$MeetingID<-meetingId
+  events$Status<-mapply(intradata::retrieve_event_info,events$MeetingID,events$Race,'event_status')
   events<-events[events$Status=="FINAL",]
-  events$Fields<-fields<-mapply(events::retrieve_field,events$EventID)-mapply(competitor::scratchings,events$EventID)
-  events$Race<-mapply(events::retrieve_races,events$MeetingID,events$EventID)
+  events$Fields<-fields<-mapply(intradata::retrieve_field,events$MeetingID,events$Race)
   events<-events[order(events$Race),]
+  print(events)
   print('<<<')
   races<-events[!duplicated(events[c("MeetingID","Race")]),c("MeetingID","Race")]
   dat<-as.data.frame(matrix(NA,sum(fields),12))
-  colnames(dat)<-c('Course','CompID','Matrix','Race','MeetingID','Odds','Scratched','EventID','Distance','FP','Race_Name','Include')
+  colnames(dat)<-c('EventID','CompID','Race','MeetingID','Distance','Matrix','Odds','Course','FP','Race_Name','Include','EventID')
   for(i in 1:nrow(races)){
     end<-sum(events$Fields[1:i])
     if(i==1) start<-1
     else start<-sum(events$Fields[1:(i-1)])+1
-    a<-master_collate(date,animal,events$Race[i],meetingid,events)
+    a<-master_collate(events$Race[i],meetingId,events)
     print('>>>')
     print(a)
     dat[start:end,]<-a
     flush.console()
   }
-  dat<-dat[is.finite(dat$Race),]
   return(dat)
 }
